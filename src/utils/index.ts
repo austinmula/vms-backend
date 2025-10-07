@@ -23,7 +23,74 @@ export class AuthUtils {
   }
 
   /**
-   * Generate a JWT token
+   * Generate a salt for password hashing
+   */
+  static async generateSalt(): Promise<string> {
+    return bcrypt.genSalt(12);
+  }
+
+  /**
+   * Generate an access JWT token
+   */
+  static generateAccessToken(payload: {
+    userId: string;
+    email: string;
+    employeeId: string;
+    roles?: string[];
+  }): string {
+    try {
+      if (!config.jwt.secret) {
+        throw new Error("JWT secret is not configured");
+      }
+
+      const tokenPayload = {
+        userId: payload.userId,
+        email: payload.email,
+        employeeId: payload.employeeId,
+        roles: payload.roles || [],
+        type: "access",
+      };
+
+      return jwt.sign(tokenPayload, config.jwt.secret, {
+        expiresIn: config.jwt.expiresIn,
+      } as SignOptions);
+    } catch (error) {
+      throw new Error(
+        "Failed to generate access token: " + (error as Error).message
+      );
+    }
+  }
+
+  /**
+   * Generate a refresh JWT token
+   */
+  static generateRefreshToken(payload: {
+    userId: string;
+    email: string;
+  }): string {
+    try {
+      if (!config.jwt.secret) {
+        throw new Error("JWT secret is not configured");
+      }
+
+      const tokenPayload = {
+        userId: payload.userId,
+        email: payload.email,
+        type: "refresh",
+      };
+
+      return jwt.sign(tokenPayload, config.jwt.secret, {
+        expiresIn: config.jwt.refreshExpiresIn,
+      } as SignOptions);
+    } catch (error) {
+      throw new Error(
+        "Failed to generate refresh token: " + (error as Error).message
+      );
+    }
+  }
+
+  /**
+   * Generate a JWT token (legacy method)
    */
   static generateToken(payload: Omit<JwtPayload, "iat" | "exp">): string {
     try {
@@ -56,37 +123,29 @@ export class AuthUtils {
   }
 
   /**
-   * Generate a refresh token
+   * Hash a token for storage
    */
-  static generateRefreshToken(
-    payload: Omit<JwtPayload, "iat" | "exp">
-  ): string {
+  static async hashToken(token: string): Promise<string> {
+    return bcrypt.hash(token, 10);
+  }
+
+  /**
+   * Generate a password reset token
+   */
+  static generateResetToken(): string {
+    return jwt.sign({ type: "password_reset" }, config.jwt.secret, {
+      expiresIn: "1h",
+    } as SignOptions);
+  }
+
+  /**
+   * Verify refresh token
+   */
+  static verifyRefreshToken(token: string): any {
     try {
-      if (!payload || typeof payload !== "object") {
-        throw new Error("Invalid payload for refresh token generation");
-      }
-
-      if (!config.jwt.secret) {
-        throw new Error("JWT secret is not configured");
-      }
-
-      // Convert payload to a plain object to avoid issues with Omit type
-      const tokenPayload = {
-        userId: payload.userId,
-        companyId: payload.companyId,
-        email: payload.email,
-        role: payload.role,
-      };
-
-      return jwt.sign(tokenPayload, config.jwt.secret, {
-        expiresIn: config.jwt.refreshExpiresIn,
-      } as SignOptions);
-    } catch (error) {
-      throw new Error(
-        `Failed to generate refresh token: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
+      return jwt.verify(token, config.jwt.secret);
+    } catch {
+      return null;
     }
   }
 
