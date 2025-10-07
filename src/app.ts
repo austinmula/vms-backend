@@ -10,7 +10,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { authMiddleware } from "./middleware/auth";
 
 // Import routes
-// import authRoutes from "./routes/auth";
+import authRoutes from "./routes/auth";
 // import userRoutes from "./routes/users";
 // import visitorRoutes from "./routes/visitors";
 // import visitRoutes from "./routes/visits";
@@ -106,7 +106,7 @@ class App {
     });
 
     // API routes
-    // this.app.use("/api/auth", authRoutes);
+    this.app.use("/api/auth", authRoutes);
     // this.app.use("/api/users", authMiddleware, userRoutes);
     // this.app.use("/api/visitors", authMiddleware, visitorRoutes);
     // this.app.use("/api/visits", authMiddleware, visitRoutes);
