@@ -2,29 +2,35 @@ import { z } from "zod";
 
 // User schemas
 export const createUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  phone: z.string().optional(),
-  role: z
-    .enum([
-      "super_admin",
-      "company_admin",
-      "security",
-      "employee",
-      "receptionist",
-    ])
-    .default("employee"),
-  department: z.string().optional(),
-  jobTitle: z.string().optional(),
-  locationId: z.string().uuid().optional(),
-  areaId: z.string().uuid().optional(),
+  employeeId: z.string().uuid("Invalid employee ID"),
+  email: z.string().email("Invalid email address"),
+  password: z
+    .string()
+    .min(10, "Password must be at least 10 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/\d/, "Password must contain at least one number")
+    .regex(
+      /[^A-Za-z0-9]/,
+      "Password must contain at least one special character"
+    ),
+  roleIds: z.array(z.string().uuid()).optional().default([]),
+  mfaEnabled: z.boolean().optional().default(false),
 });
 
-export const updateUserSchema = createUserSchema
-  .partial()
-  .omit({ password: true });
+export const updateUserSchema = z.object({
+  email: z.string().email("Invalid email address").optional(),
+  password: z
+    .string()
+    .min(10, "Password must be at least 10 characters")
+    .regex(/[A-Z]/)
+    .regex(/[a-z]/)
+    .regex(/\d/)
+    .regex(/[^A-Za-z0-9]/)
+    .optional(),
+  mfaEnabled: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string(),
@@ -188,6 +194,25 @@ export const userFilterSchema = z
     isActive: z.coerce.boolean().optional(),
   })
   .merge(paginationSchema);
+
+// Role assignment schema
+export const assignRolesSchema = z.object({
+  roleIds: z
+    .array(z.string().uuid())
+    .min(1, "At least one role ID is required"),
+});
+
+export const listUsersQuerySchema = z.object({
+  search: z.string().optional(),
+  role: z.string().optional(),
+  isActive: z
+    .string()
+    .transform((v) => (v === "true" ? true : v === "false" ? false : undefined))
+    .optional()
+    .or(z.boolean().optional()),
+  limit: z.coerce.number().min(1).max(100).optional(),
+  offset: z.coerce.number().min(0).optional(),
+});
 
 // Response schemas
 export const successResponseSchema = z.object({
