@@ -103,8 +103,8 @@ async function runSeed() {
     console.log("🔐 Creating system permissions...");
     const systemPermissions = [
       {
-        name: "system.admin",
-        slug: "system-admin",
+        name: "system:admin",
+        slug: "system:admin",
         resource: "system",
         action: "admin",
         description: "Full system administration access",
@@ -112,28 +112,28 @@ async function runSeed() {
       // Organization permissions
       {
         name: "organizations:read",
-        slug: "organizations-read",
+        slug: "organizations:read",
         resource: "organizations",
         action: "read",
         description: "View organization details",
       },
       {
         name: "organizations:create",
-        slug: "organizations-create",
+        slug: "organizations:create",
         resource: "organizations",
         action: "create",
         description: "Create new organizations",
       },
       {
         name: "organizations:update",
-        slug: "organizations-update",
+        slug: "organizations:update",
         resource: "organizations",
         action: "update",
         description: "Update organization details",
       },
       {
         name: "organizations:delete",
-        slug: "organizations-delete",
+        slug: "organizations:delete",
         resource: "organizations",
         action: "delete",
         description: "Delete organizations",
@@ -141,35 +141,35 @@ async function runSeed() {
       // User permissions
       {
         name: "users:read",
-        slug: "users-read",
+        slug: "users:read",
         resource: "users",
         action: "read",
         description: "View users",
       },
       {
         name: "users:create",
-        slug: "users-create",
+        slug: "users:create",
         resource: "users",
         action: "create",
         description: "Create new users",
       },
       {
         name: "users:update",
-        slug: "users-update",
+        slug: "users:update",
         resource: "users",
         action: "update",
         description: "Update user details",
       },
       {
         name: "users:delete",
-        slug: "users-delete",
+        slug: "users:delete",
         resource: "users",
         action: "delete",
         description: "Delete users",
       },
       {
         name: "users:assign-roles",
-        slug: "users-assign-roles",
+        slug: "users:assign-roles",
         resource: "users",
         action: "assign-roles",
         description: "Assign roles to users",
@@ -177,43 +177,50 @@ async function runSeed() {
       // Visitor permissions
       {
         name: "visitors:read",
-        slug: "visitors-read",
+        slug: "visitors:read",
         resource: "visitors",
         action: "read",
         description: "View visitors",
       },
       {
         name: "visitors:create",
-        slug: "visitors-create",
+        slug: "visitors:create",
         resource: "visitors",
         action: "create",
         description: "Create new visitors",
       },
       {
         name: "visitors:update",
-        slug: "visitors-update",
+        slug: "visitors:update",
         resource: "visitors",
         action: "update",
         description: "Update visitor details",
       },
       {
         name: "visitors:delete",
-        slug: "visitors-delete",
+        slug: "visitors:delete",
         resource: "visitors",
         action: "delete",
         description: "Delete visitors",
       },
+      {
+        name: "visitors:blacklist",
+        slug: "visitors:blacklist",
+        resource: "visitors",
+        action: "blacklist",
+        description: "Manage visitor blacklist",
+      },
       // Visit permissions
       {
-        name: "visits.manage",
-        slug: "visits-manage",
+        name: "visits:manage",
+        slug: "visits:manage",
         resource: "visits",
         action: "manage",
         description: "Manage visits",
       },
       {
-        name: "visits.checkin",
-        slug: "visits-checkin",
+        name: "visits:checkin",
+        slug: "visits:checkin",
         resource: "visits",
         action: "checkin",
         description: "Check visitors in/out",
@@ -316,7 +323,7 @@ async function runSeed() {
 
     if (receptionistRoleId) {
       const receptionistPermissionNames = [
-        "visits.checkin",
+        "visits:checkin",
         "visitors:read",
         "visitors:create",
         "visitors:update",
