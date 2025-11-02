@@ -12,7 +12,8 @@ import { authMiddleware } from "./middleware/auth";
 // Import routes
 import authRoutes from "./routes/auth";
 import { usersRouter } from "./routes/users";
-// import visitorRoutes from "./routes/visitors";
+import { visitorsRouter } from "./routes/visitors";
+import { organizationsRouter } from "./routes/organizations";
 // import visitRoutes from "./routes/visits";
 // import companyRoutes from "./routes/companies";
 // import locationRoutes from "./routes/locations";
@@ -108,7 +109,8 @@ class App {
     // API routes
     this.app.use("/api/auth", authRoutes);
     this.app.use("/api/users", usersRouter);
-    // this.app.use("/api/visitors", authMiddleware, visitorRoutes);
+    this.app.use("/api/visitors", visitorsRouter);
+    this.app.use("/api/organizations", organizationsRouter);
     // this.app.use("/api/visits", authMiddleware, visitRoutes);
     // this.app.use("/api/companies", authMiddleware, companyRoutes);
     // this.app.use("/api/locations", authMiddleware, locationRoutes);
@@ -125,6 +127,7 @@ class App {
           auth: "/api/auth",
           users: "/api/users",
           visitors: "/api/visitors",
+          organizations: "/api/organizations",
           visits: "/api/visits",
           companies: "/api/companies",
           locations: "/api/locations",

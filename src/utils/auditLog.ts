@@ -182,6 +182,160 @@ export class AuditLog {
   }
 
   /**
+   * Log visitor creation
+   */
+  async visitorCreated(
+    visitorId: string,
+    createdBy: string,
+    ipAddress: string,
+    organizationId: string = "system"
+  ) {
+    try {
+      await db.insert(auditLogs).values({
+        organizationId,
+        userId: createdBy,
+        action: "create",
+        resource: "visitor",
+        resourceId: visitorId,
+        description: "Visitor created",
+        metadata: { visitorId } as any,
+        ipAddress,
+        userAgent: null,
+      });
+
+      log.info("Visitor created event logged", { visitorId, createdBy });
+    } catch (error) {
+      log.error("Failed to log visitor creation", { error });
+    }
+  }
+
+  /**
+   * Log visitor update
+   */
+  async visitorUpdated(
+    visitorId: string,
+    updatedBy: string,
+    changedFields: string[],
+    ipAddress: string,
+    organizationId: string = "system"
+  ) {
+    try {
+      await db.insert(auditLogs).values({
+        organizationId,
+        userId: updatedBy,
+        action: "update",
+        resource: "visitor",
+        resourceId: visitorId,
+        description: "Visitor updated",
+        metadata: { changedFields } as any,
+        ipAddress,
+        userAgent: null,
+      });
+
+      log.info("Visitor updated event logged", {
+        visitorId,
+        updatedBy,
+        changedFields,
+      });
+    } catch (error) {
+      log.error("Failed to log visitor update", { error });
+    }
+  }
+
+  /**
+   * Log visitor deletion (soft delete/blacklist)
+   */
+  async visitorDeleted(
+    visitorId: string,
+    deletedBy: string,
+    ipAddress: string,
+    organizationId: string = "system"
+  ) {
+    try {
+      await db.insert(auditLogs).values({
+        organizationId,
+        userId: deletedBy,
+        action: "delete",
+        resource: "visitor",
+        resourceId: visitorId,
+        description: "Visitor deleted (blacklisted)",
+        metadata: {} as any,
+        ipAddress,
+        userAgent: null,
+      });
+
+      log.info("Visitor deleted event logged", { visitorId, deletedBy });
+    } catch (error) {
+      log.error("Failed to log visitor deletion", { error });
+    }
+  }
+
+  /**
+   * Log visitor blacklist
+   */
+  async visitorBlacklisted(
+    visitorId: string,
+    reason: string,
+    blacklistedBy: string,
+    ipAddress: string,
+    organizationId: string = "system"
+  ) {
+    try {
+      await db.insert(auditLogs).values({
+        organizationId,
+        userId: blacklistedBy,
+        action: "update",
+        resource: "visitor",
+        resourceId: visitorId,
+        description: "Visitor blacklisted",
+        metadata: { reason } as any,
+        ipAddress,
+        userAgent: null,
+        severity: "warning",
+      });
+
+      log.warn("Visitor blacklisted event logged", {
+        visitorId,
+        reason,
+        blacklistedBy,
+      });
+    } catch (error) {
+      log.error("Failed to log visitor blacklist", { error });
+    }
+  }
+
+  /**
+   * Log visitor removed from blacklist
+   */
+  async visitorRemovedFromBlacklist(
+    visitorId: string,
+    removedBy: string,
+    ipAddress: string,
+    organizationId: string = "system"
+  ) {
+    try {
+      await db.insert(auditLogs).values({
+        organizationId,
+        userId: removedBy,
+        action: "update",
+        resource: "visitor",
+        resourceId: visitorId,
+        description: "Visitor removed from blacklist",
+        metadata: {} as any,
+        ipAddress,
+        userAgent: null,
+      });
+
+      log.info("Visitor removed from blacklist event logged", {
+        visitorId,
+        removedBy,
+      });
+    } catch (error) {
+      log.error("Failed to log visitor blacklist removal", { error });
+    }
+  }
+
+  /**
    * Log user login
    */
   async userLogin(
