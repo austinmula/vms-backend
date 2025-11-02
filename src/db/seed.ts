@@ -1,4 +1,6 @@
-import { db } from "./index";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as schema from "./schema";
 import {
   organizations,
   roles,
@@ -11,6 +13,13 @@ import {
 import { AuthUtils } from "../utils";
 import logger from "../utils/logger";
 import { eq } from "drizzle-orm";
+import { config } from "../config";
+
+const pool = new Pool({
+  connectionString: config.database.url,
+});
+
+const db = drizzle(pool, { schema });
 
 async function runSeed() {
   try {
@@ -100,27 +109,101 @@ async function runSeed() {
         action: "admin",
         description: "Full system administration access",
       },
+      // Organization permissions
       {
-        name: "organizations.manage",
-        slug: "organizations-manage",
+        name: "organizations:read",
+        slug: "organizations-read",
         resource: "organizations",
-        action: "manage",
-        description: "Manage organizations",
+        action: "read",
+        description: "View organization details",
       },
       {
-        name: "users.manage",
-        slug: "users-manage",
+        name: "organizations:create",
+        slug: "organizations-create",
+        resource: "organizations",
+        action: "create",
+        description: "Create new organizations",
+      },
+      {
+        name: "organizations:update",
+        slug: "organizations-update",
+        resource: "organizations",
+        action: "update",
+        description: "Update organization details",
+      },
+      {
+        name: "organizations:delete",
+        slug: "organizations-delete",
+        resource: "organizations",
+        action: "delete",
+        description: "Delete organizations",
+      },
+      // User permissions
+      {
+        name: "users:read",
+        slug: "users-read",
         resource: "users",
-        action: "manage",
-        description: "Manage users",
+        action: "read",
+        description: "View users",
       },
       {
-        name: "visitors.manage",
-        slug: "visitors-manage",
-        resource: "visitors",
-        action: "manage",
-        description: "Manage visitors",
+        name: "users:create",
+        slug: "users-create",
+        resource: "users",
+        action: "create",
+        description: "Create new users",
       },
+      {
+        name: "users:update",
+        slug: "users-update",
+        resource: "users",
+        action: "update",
+        description: "Update user details",
+      },
+      {
+        name: "users:delete",
+        slug: "users-delete",
+        resource: "users",
+        action: "delete",
+        description: "Delete users",
+      },
+      {
+        name: "users:assign-roles",
+        slug: "users-assign-roles",
+        resource: "users",
+        action: "assign-roles",
+        description: "Assign roles to users",
+      },
+      // Visitor permissions
+      {
+        name: "visitors:read",
+        slug: "visitors-read",
+        resource: "visitors",
+        action: "read",
+        description: "View visitors",
+      },
+      {
+        name: "visitors:create",
+        slug: "visitors-create",
+        resource: "visitors",
+        action: "create",
+        description: "Create new visitors",
+      },
+      {
+        name: "visitors:update",
+        slug: "visitors-update",
+        resource: "visitors",
+        action: "update",
+        description: "Update visitor details",
+      },
+      {
+        name: "visitors:delete",
+        slug: "visitors-delete",
+        resource: "visitors",
+        action: "delete",
+        description: "Delete visitors",
+      },
+      // Visit permissions
       {
         name: "visits.manage",
         slug: "visits-manage",
@@ -232,31 +315,27 @@ async function runSeed() {
     }
 
     if (receptionistRoleId) {
-      const checkInPermission = createdPermissions.find(
-        (p) => p && p.name === "visits.checkin"
-      );
-      const visitorsManagePermission = createdPermissions.find(
-        (p) => p && p.name === "visitors.manage"
-      );
+      const receptionistPermissionNames = [
+        "visits.checkin",
+        "visitors:read",
+        "visitors:create",
+        "visitors:update",
+        "organizations:read",
+      ];
 
-      if (checkInPermission) {
-        await db
-          .insert(rolePermissions)
-          .values({
-            roleId: receptionistRoleId,
-            permissionId: checkInPermission.id,
-          })
-          .onConflictDoNothing();
-      }
-
-      if (visitorsManagePermission) {
-        await db
-          .insert(rolePermissions)
-          .values({
-            roleId: receptionistRoleId,
-            permissionId: visitorsManagePermission.id,
-          })
-          .onConflictDoNothing();
+      for (const permName of receptionistPermissionNames) {
+        const permission = createdPermissions.find(
+          (p) => p && p.name === permName
+        );
+        if (permission) {
+          await db
+            .insert(rolePermissions)
+            .values({
+              roleId: receptionistRoleId,
+              permissionId: permission.id,
+            })
+            .onConflictDoNothing();
+        }
       }
     }
 
@@ -339,12 +418,14 @@ async function runSeed() {
 // Run the seeding if this file is executed directly
 if (require.main === module) {
   runSeed()
-    .then(() => {
+    .then(async () => {
       console.log("Seeding process completed.");
+      await pool.end();
       process.exit(0);
     })
-    .catch((error) => {
+    .catch(async (error) => {
       console.error("Seeding failed:", error);
+      await pool.end();
       process.exit(1);
     });
 }

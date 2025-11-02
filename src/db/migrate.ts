@@ -1,9 +1,16 @@
-import { migrate } from "drizzle-orm/neon-http/migrator";
-import { db } from "./index";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { Pool } from "pg";
 import { config } from "../config";
 
 async function runMigrations() {
   console.log("🔄 Running database migrations...");
+
+  const pool = new Pool({
+    connectionString: config.database.url,
+  });
+
+  const db = drizzle(pool);
 
   try {
     await migrate(db, {
@@ -11,9 +18,11 @@ async function runMigrations() {
     });
 
     console.log("✅ Database migrations completed successfully");
+    await pool.end();
     process.exit(0);
   } catch (error) {
     console.error("❌ Migration failed:", error);
+    await pool.end();
     process.exit(1);
   }
 }

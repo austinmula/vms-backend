@@ -214,6 +214,19 @@ export const listUsersQuerySchema = z.object({
   offset: z.coerce.number().min(0).optional(),
 });
 
+// Visitor query/filter schemas
+export const listVisitorsQuerySchema = z.object({
+  search: z.string().optional(), // Search by name, email, company, phone
+  isBlacklisted: z
+    .string()
+    .transform((v) => (v === "true" ? true : v === "false" ? false : undefined))
+    .optional()
+    .or(z.boolean().optional()),
+  company: z.string().optional(),
+  limit: z.coerce.number().min(1).max(100).optional().default(25),
+  offset: z.coerce.number().min(0).optional().default(0),
+});
+
 // Response schemas
 export const successResponseSchema = z.object({
   success: z.boolean(),
@@ -225,6 +238,32 @@ export const errorResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   errors: z.array(z.string()).optional(),
+});
+
+// Organization schemas
+export const createOrganizationSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(255),
+  slug: z
+    .string()
+    .min(2)
+    .max(100)
+    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, numbers, and hyphens only"),
+  domain: z.string().optional(),
+  address: z.string().optional(),
+  phone: z.string().max(50).optional(),
+  website: z.string().url().optional().or(z.literal("")),
+  subscriptionTier: z.enum(["free", "basic", "premium", "enterprise"]).default("basic"),
+  timezone: z.string().default("UTC"),
+});
+
+export const updateOrganizationSchema = createOrganizationSchema.partial();
+
+export const organizationQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(10),
+  search: z.string().optional(),
+  subscriptionTier: z.enum(["free", "basic", "premium", "enterprise"]).optional(),
+  isActive: z.coerce.boolean().optional(),
 });
 
 // Types
@@ -240,3 +279,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
 export type VisitFilterInput = z.infer<typeof visitFilterSchema>;
 export type UserFilterInput = z.infer<typeof userFilterSchema>;
+export type ListVisitorsQueryInput = z.infer<typeof listVisitorsQuerySchema>;
+export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
+export type UpdateOrganizationInput = z.infer<typeof updateOrganizationSchema>;
+export type OrganizationQueryInput = z.infer<typeof organizationQuerySchema>;
