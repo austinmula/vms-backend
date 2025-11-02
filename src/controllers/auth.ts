@@ -6,10 +6,12 @@ import {
   userRoles,
   roles,
   authenticationTokens,
+  rolePermissions,
+  permissions,
 } from "../db/schema/tables";
 import { AuthUtils } from "../utils";
 import { auditLog } from "../utils/logger";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 // Request validation schemas
@@ -124,6 +126,34 @@ export class AuthController {
 
       // Generate tokens
       const user = newUser[0]!;
+
+      // Get user roles and permissions
+      const userRolesResult = await db
+        .select({
+          roleId: userRoles.roleId,
+          roleName: roles.name,
+        })
+        .from(userRoles)
+        .leftJoin(roles, eq(userRoles.roleId, roles.id))
+        .where(eq(userRoles.userId, user.id));
+
+      const roleIds = userRolesResult.map((r) => r.roleId);
+      let userPermissions: string[] = [];
+
+      if (roleIds.length > 0) {
+        const permissionsResult = await db
+          .select({
+            slug: permissions.slug,
+          })
+          .from(rolePermissions)
+          .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+          .where(inArray(rolePermissions.roleId, roleIds));
+
+        userPermissions = Array.from(
+          new Set(permissionsResult.map((p) => p.slug))
+        );
+      }
+
       const accessToken = AuthUtils.generateAccessToken({
         userId: user.id,
         email: user.email,
@@ -160,6 +190,7 @@ export class AuthController {
             id: user.id,
             email: user.email,
             employeeId: user.employeeId,
+            permissions: userPermissions,
             isActive: user.isActive,
             mfaEnabled: user.mfaEnabled,
           },
@@ -320,6 +351,25 @@ export class AuthController {
           displayName: r.roles!.name,
         }));
 
+      // Get user permissions
+      const roleIds = userRolesList.map((r) => r.id);
+      let userPermissions: string[] = [];
+
+      if (roleIds.length > 0) {
+        const permissionsResult = await db
+          .select({
+            slug: permissions.slug,
+          })
+          .from(rolePermissions)
+          .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+          .where(inArray(rolePermissions.roleId, roleIds));
+
+        // Remove duplicates using Set
+        userPermissions = Array.from(
+          new Set(permissionsResult.map((p) => p.slug))
+        );
+      }
+
       // Generate tokens
       const accessToken = AuthUtils.generateAccessToken({
         userId: user.id,
@@ -366,6 +416,7 @@ export class AuthController {
                 }
               : null,
             roles: userRolesList,
+            permissions: userPermissions,
             isActive: user.isActive,
             mfaEnabled: user.mfaEnabled,
             mustChangePassword: user.mustChangePassword,
@@ -593,6 +644,25 @@ export class AuthController {
           displayName: r.roles!.name,
         }));
 
+      // Get user permissions
+      const roleIds = userRolesList.map((r) => r.id);
+      let userPermissions: string[] = [];
+
+      if (roleIds.length > 0) {
+        const permissionsResult = await db
+          .select({
+            slug: permissions.slug,
+          })
+          .from(rolePermissions)
+          .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+          .where(inArray(rolePermissions.roleId, roleIds));
+
+        // Remove duplicates using Set
+        userPermissions = Array.from(
+          new Set(permissionsResult.map((p) => p.slug))
+        );
+      }
+
       res.json({
         success: true,
         data: {
@@ -610,6 +680,7 @@ export class AuthController {
                 }
               : null,
             roles: userRolesList,
+            permissions: userPermissions,
             isActive: user.isActive,
             mfaEnabled: user.mfaEnabled,
             mustChangePassword: user.mustChangePassword,
