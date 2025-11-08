@@ -283,3 +283,87 @@ export type ListVisitorsQueryInput = z.infer<typeof listVisitorsQuerySchema>;
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
 export type UpdateOrganizationInput = z.infer<typeof updateOrganizationSchema>;
 export type OrganizationQueryInput = z.infer<typeof organizationQuerySchema>;
+
+// Role schemas
+export const createRoleSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(255),
+  slug: z
+    .string()
+    .min(2)
+    .max(100)
+    .regex(/^[a-z0-9-_]+$/, "Slug must be lowercase letters, numbers, hyphens, and underscores only"),
+  description: z.string().optional(),
+  organizationId: z.string().uuid("Invalid organization ID"),
+  isSystemRole: z.boolean().optional().default(false),
+  permissionIds: z.array(z.string().uuid()).optional().default([]),
+});
+
+export const updateRoleSchema = z.object({
+  name: z.string().min(2).max(255).optional(),
+  description: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const listRolesQuerySchema = z.object({
+  search: z.string().optional(),
+  isActive: z
+    .string()
+    .transform((v) => (v === "true" ? true : v === "false" ? false : undefined))
+    .optional()
+    .or(z.boolean().optional()),
+  isSystemRole: z
+    .string()
+    .transform((v) => (v === "true" ? true : v === "false" ? false : undefined))
+    .optional()
+    .or(z.boolean().optional()),
+  organizationId: z.string().uuid().optional(),
+  limit: z.coerce.number().min(1).max(100).optional().default(25),
+  offset: z.coerce.number().min(0).optional().default(0),
+});
+
+// Permission schemas
+export const createPermissionSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(255),
+  slug: z
+    .string()
+    .min(2)
+    .max(100)
+    .regex(/^[a-z0-9:-_]+$/, "Slug must be lowercase letters, numbers, colons, hyphens, and underscores"),
+  resource: z.string().min(2, "Resource must be at least 2 characters").max(100),
+  action: z.string().min(2, "Action must be at least 2 characters").max(100),
+  description: z.string().optional(),
+  isSystemPermission: z.boolean().optional().default(false),
+});
+
+export const updatePermissionSchema = z.object({
+  name: z.string().min(2).max(255).optional(),
+  description: z.string().optional(),
+});
+
+export const listPermissionsQuerySchema = z.object({
+  search: z.string().optional(),
+  resource: z.string().optional(),
+  action: z.string().optional(),
+  isSystemPermission: z
+    .string()
+    .transform((v) => (v === "true" ? true : v === "false" ? false : undefined))
+    .optional()
+    .or(z.boolean().optional()),
+  limit: z.coerce.number().min(1).max(200).optional().default(100),
+  offset: z.coerce.number().min(0).optional().default(0),
+});
+
+export const assignPermissionsSchema = z.object({
+  permissionIds: z
+    .array(z.string().uuid())
+    .min(1, "At least one permission ID is required"),
+});
+
+// Types
+export type CreateRoleInput = z.infer<typeof createRoleSchema>;
+export type UpdateRoleInput = z.infer<typeof updateRoleSchema>;
+export type ListRolesQueryInput = z.infer<typeof listRolesQuerySchema>;
+export type CreatePermissionInput = z.infer<typeof createPermissionSchema>;
+export type UpdatePermissionInput = z.infer<typeof updatePermissionSchema>;
+export type ListPermissionsQueryInput = z.infer<typeof listPermissionsQuerySchema>;
+export type AssignPermissionsInput = z.infer<typeof assignPermissionsSchema>;
