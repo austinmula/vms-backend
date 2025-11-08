@@ -14,6 +14,8 @@ import authRoutes from "./routes/auth";
 import { usersRouter } from "./routes/users";
 import { visitorsRouter } from "./routes/visitors";
 import { organizationsRouter } from "./routes/organizations";
+import { rolesRouter } from "./routes/roles";
+import { permissionsRouter } from "./routes/permissions";
 // import visitRoutes from "./routes/visits";
 // import companyRoutes from "./routes/companies";
 // import locationRoutes from "./routes/locations";
@@ -111,6 +113,8 @@ class App {
     this.app.use("/api/users", usersRouter);
     this.app.use("/api/visitors", visitorsRouter);
     this.app.use("/api/organizations", organizationsRouter);
+    this.app.use("/api/roles", rolesRouter);
+    this.app.use("/api/permissions", permissionsRouter);
     // this.app.use("/api/visits", authMiddleware, visitRoutes);
     // this.app.use("/api/companies", authMiddleware, companyRoutes);
     // this.app.use("/api/locations", authMiddleware, locationRoutes);
