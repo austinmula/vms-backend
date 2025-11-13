@@ -174,6 +174,64 @@ async function runSeed() {
         action: "assign-roles",
         description: "Assign roles to users",
       },
+      // Permissions permissions (meta permissions)
+      {
+        name: "permissions:read",
+        slug: "permissions:read",
+        resource: "permissions",
+        action: "read",
+        description: "View permissions",
+      },
+      {
+        name: "permissions:create",
+        slug: "permissions:create",
+        resource: "permissions",
+        action: "create",
+        description: "Create new permissions",
+      },
+      {
+        name: "permissions:update",
+        slug: "permissions:update",
+        resource: "permissions",
+        action: "update",
+        description: "Update permission details",
+      },
+      {
+        name: "permissions:delete",
+        slug: "permissions:delete",
+        resource: "permissions",
+        action: "delete",
+        description: "Delete permissions",
+      },
+      // Roles permissions
+      {
+        name: "roles:read",
+        slug: "roles:read",
+        resource: "roles",
+        action: "read",
+        description: "View roles",
+      },
+      {
+        name: "roles:create",
+        slug: "roles:create",
+        resource: "roles",
+        action: "create",
+        description: "Create new roles",
+      },
+      {
+        name: "roles:update",
+        slug: "roles:update",
+        resource: "roles",
+        action: "update",
+        description: "Update role details",
+      },
+      {
+        name: "roles:delete",
+        slug: "roles:delete",
+        resource: "roles",
+        action: "delete",
+        description: "Delete roles",
+      },
       // Visitor permissions
       {
         name: "visitors:read",
