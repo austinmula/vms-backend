@@ -36,6 +36,7 @@ export class AuthUtils {
     userId: string;
     email: string;
     employeeId: string;
+    organizationId: string;
     roles?: string[];
   }): string {
     try {
@@ -47,6 +48,7 @@ export class AuthUtils {
         userId: payload.userId,
         email: payload.email,
         employeeId: payload.employeeId,
+        organizationId: payload.organizationId,
         roles: payload.roles || [],
         type: "access",
       };

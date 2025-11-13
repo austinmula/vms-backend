@@ -158,6 +158,7 @@ export class AuthController {
         userId: user.id,
         email: user.email,
         employeeId: user.employeeId,
+        organizationId: employee[0]!.organizationId,
       });
 
       const refreshToken = AuthUtils.generateRefreshToken({
@@ -190,6 +191,7 @@ export class AuthController {
             id: user.id,
             email: user.email,
             employeeId: user.employeeId,
+            organizationId: employee[0]!.organizationId,
             permissions: userPermissions,
             isActive: user.isActive,
             mfaEnabled: user.mfaEnabled,
@@ -375,6 +377,7 @@ export class AuthController {
         userId: user.id,
         email: user.email,
         employeeId: user.employeeId,
+        organizationId: employee?.organizationId || "",
         roles: userRolesList.map((r) => r.name),
       });
 
@@ -407,6 +410,7 @@ export class AuthController {
             id: user.id,
             email: user.email,
             employeeId: user.employeeId,
+            organizationId: employee?.organizationId || "",
             employee: employee
               ? {
                   firstName: employee.firstName,
@@ -495,10 +499,11 @@ export class AuthController {
         });
       }
 
-      // Get user with roles
+      // Get user with roles and employee data
       const userResult = await db
         .select({
           user: systemUsers,
+          employee: employees,
           roles: {
             id: roles.id,
             name: roles.name,
@@ -506,6 +511,7 @@ export class AuthController {
           },
         })
         .from(systemUsers)
+        .leftJoin(employees, eq(systemUsers.employeeId, employees.id))
         .leftJoin(userRoles, eq(systemUsers.id, userRoles.userId))
         .leftJoin(roles, eq(userRoles.roleId, roles.id))
         .where(eq(systemUsers.id, decoded.userId));
@@ -518,6 +524,7 @@ export class AuthController {
       }
 
       const user = userResult[0]!.user!;
+      const employee = userResult[0]!.employee;
       const userRolesList = userResult
         .filter((r) => r.roles?.id)
         .map((r) => r.roles!.name);
@@ -527,6 +534,7 @@ export class AuthController {
         userId: user.id,
         email: user.email,
         employeeId: user.employeeId,
+        organizationId: employee?.organizationId || "",
         roles: userRolesList,
       });
 
@@ -670,6 +678,7 @@ export class AuthController {
             id: user.id,
             email: user.email,
             employeeId: user.employeeId,
+            organizationId: employee?.organizationId || "",
             employee: employee
               ? {
                   firstName: employee.firstName,
