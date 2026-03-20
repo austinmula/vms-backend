@@ -1,3 +1,4 @@
+import http from "http";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -175,24 +176,20 @@ class App {
     this.app.use(errorHandler);
   }
 
-  public async start() {
+  public async start(): Promise<http.Server> {
     try {
-      // Test database connection
       await testConnection();
       log.info("Database connection established");
 
-      // Start server
       const port = config.server.port;
-      this.app.listen(port, () => {
-        log.info(`🚀 VMS Backend API server running on port ${port}`);
-        log.info(
-          `📚 API Documentation available at http://localhost:${port}/api`
-        );
-        log.info(
-          `🏥 Health check available at http://localhost:${port}/health`
-        );
-        log.info(`🌍 Environment: ${config.server.nodeEnv}`);
+      const server = this.app.listen(port, () => {
+        log.info(`VMS Backend API server running on port ${port}`);
+        log.info(`API Documentation: http://localhost:${port}/api`);
+        log.info(`Health check: http://localhost:${port}/health`);
+        log.info(`Environment: ${config.server.nodeEnv}`);
       });
+
+      return server;
     } catch (error) {
       log.error("Failed to start server", error);
       process.exit(1);

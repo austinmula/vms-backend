@@ -42,15 +42,18 @@ export const errorHandler = (
     statusCode = 400;
     message = "Validation Error";
     errors = error.errors.map((err) => `${err.path.join(".")}: ${err.message}`);
-  } else if (error.name === "ValidationError") {
-    statusCode = 400;
-    message = "Validation Error";
-  } else if (error.name === "CastError") {
-    statusCode = 400;
-    message = "Invalid ID format";
-  } else if (error.name === "MongoError" && (error as any).code === 11000) {
+  } else if ((error as any).code === "23505") {
+    // PostgreSQL unique_violation
     statusCode = 409;
-    message = "Duplicate field value";
+    message = "A record with this value already exists";
+  } else if ((error as any).code === "23503") {
+    // PostgreSQL foreign_key_violation
+    statusCode = 409;
+    message = "Related resource not found";
+  } else if ((error as any).code === "23502") {
+    // PostgreSQL not_null_violation
+    statusCode = 400;
+    message = "Missing required field";
   } else if (error.name === "JsonWebTokenError") {
     statusCode = 401;
     message = "Invalid token";

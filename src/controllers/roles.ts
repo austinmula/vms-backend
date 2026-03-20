@@ -199,11 +199,11 @@ export class RolesController {
           organizationId,
           isSystemRole,
           isActive: true,
-          createdBy: req.user?.employeeId || null,
+          createdBy: req.user?.userId || null,
         })
         .returning();
 
-      const role = inserted[0];
+      const role = inserted[0]!;
       if (!role) {
         return res.status(500).json({ error: "Failed to create role" });
       }
@@ -221,7 +221,7 @@ export class RolesController {
           .map((permissionId) => ({
             roleId: role.id,
             permissionId,
-            createdBy: req.user?.employeeId || null,
+            createdBy: req.user?.userId || null,
           }));
 
         if (toInsert.length) {
@@ -229,20 +229,12 @@ export class RolesController {
         }
       }
 
-      // Audit log
-      await auditLog({
-        db,
-        organizationId,
-        userId: req.user?.userId || null,
-        employeeId: req.user?.employeeId || null,
-        action: "create",
-        resource: "roles",
-        resourceId: role.id,
-        description: `Created role: ${name}`,
-        newValues: { name, slug, description },
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent"),
-      });
+      await auditLog.securityEvent(
+        "role_created",
+        { organizationId, resourceId: role.id, name, slug, userId: req.user?.userId },
+        req.ip || "unknown",
+        organizationId
+      );
 
       // Clear permission caches
       clearAllPermissionCaches();
@@ -308,7 +300,7 @@ export class RolesController {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      const role = existing[0];
+      const role = existing[0]!;
 
       // Prevent updating system roles
       if (role.isSystemRole && req.user?.role !== "super_admin") {
@@ -325,21 +317,12 @@ export class RolesController {
       if (Object.keys(updateValues).length) {
         await db.update(roles).set(updateValues).where(eq(roles.id, id));
 
-        // Audit log
-        await auditLog({
-          db,
-          organizationId: role.organizationId,
-          userId: req.user?.userId || null,
-          employeeId: req.user?.employeeId || null,
-          action: "update",
-          resource: "roles",
-          resourceId: id,
-          description: `Updated role: ${role.name}`,
-          oldValues: existing[0],
-          newValues: updateValues,
-          ipAddress: req.ip,
-          userAgent: req.get("user-agent"),
-        });
+        await auditLog.securityEvent(
+          "role_updated",
+          { resourceId: id, name: role.name, changes: updateValues, userId: req.user?.userId },
+          req.ip || "unknown",
+          role.organizationId
+        );
 
         // Clear permission caches
         clearAllPermissionCaches();
@@ -373,7 +356,7 @@ export class RolesController {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      const role = existing[0];
+      const role = existing[0]!;
 
       // Prevent deleting system roles
       if (role.isSystemRole) {
@@ -398,20 +381,12 @@ export class RolesController {
       // Soft delete by setting isActive to false
       await db.update(roles).set({ isActive: false }).where(eq(roles.id, id));
 
-      // Audit log
-      await auditLog({
-        db,
-        organizationId: role.organizationId,
-        userId: req.user?.userId || null,
-        employeeId: req.user?.employeeId || null,
-        action: "delete",
-        resource: "roles",
-        resourceId: id,
-        description: `Deleted role: ${role.name}`,
-        oldValues: role,
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent"),
-      });
+      await auditLog.securityEvent(
+        "role_deleted",
+        { resourceId: id, name: role.name, userId: req.user?.userId },
+        req.ip || "unknown",
+        role.organizationId
+      );
 
       // Clear permission caches
       clearAllPermissionCaches();
@@ -442,7 +417,7 @@ export class RolesController {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      const role = roleExists[0];
+      const role = roleExists[0]!;
 
       // Prevent modifying system role permissions
       if (role.isSystemRole && req.user?.role !== "super_admin") {
@@ -475,7 +450,7 @@ export class RolesController {
           .map((permissionId) => ({
             roleId: id,
             permissionId,
-            createdBy: req.user?.employeeId || null,
+            createdBy: req.user?.userId || null,
           }));
 
         if (toInsert.length) {
@@ -483,20 +458,12 @@ export class RolesController {
         }
       }
 
-      // Audit log
-      await auditLog({
-        db,
-        organizationId: role.organizationId,
-        userId: req.user?.userId || null,
-        employeeId: req.user?.employeeId || null,
-        action: "update",
-        resource: "roles",
-        resourceId: id,
-        description: `Assigned permissions to role: ${role.name}`,
-        newValues: { permissionIds },
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent"),
-      });
+      await auditLog.securityEvent(
+        "role_permissions_assigned",
+        { resourceId: id, name: role.name, permissionIds, userId: req.user?.userId },
+        req.ip || "unknown",
+        role.organizationId
+      );
 
       // Clear permission caches
       clearAllPermissionCaches();
@@ -530,7 +497,7 @@ export class RolesController {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      const role = roleExists[0];
+      const role = roleExists[0]!;
 
       // Prevent modifying system role permissions
       if (role.isSystemRole && req.user?.role !== "super_admin") {
@@ -548,20 +515,12 @@ export class RolesController {
           )
         );
 
-      // Audit log
-      await auditLog({
-        db,
-        organizationId: role.organizationId,
-        userId: req.user?.userId || null,
-        employeeId: req.user?.employeeId || null,
-        action: "update",
-        resource: "roles",
-        resourceId: id,
-        description: `Removed permission from role: ${role.name}`,
-        oldValues: { permissionId },
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent"),
-      });
+      await auditLog.securityEvent(
+        "role_permission_removed",
+        { resourceId: id, name: role.name, permissionId, userId: req.user?.userId },
+        req.ip || "unknown",
+        role.organizationId
+      );
 
       // Clear permission caches
       clearAllPermissionCaches();

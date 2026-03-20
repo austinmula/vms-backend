@@ -52,15 +52,16 @@ async function getUserOrganizationId(userId: string): Promise<string | null> {
     .where(eq(systemUsers.id, userId))
     .limit(1);
 
-  if (!user.length || !user[0].employeeId) return null;
+  const userRecord = user[0];
+  if (!userRecord?.employeeId) return null;
 
   const employee = await db
     .select({ organizationId: employees.organizationId })
     .from(employees)
-    .where(eq(employees.id, user[0].employeeId))
+    .where(eq(employees.id, userRecord.employeeId))
     .limit(1);
 
-  return employee.length ? employee[0].organizationId : null;
+  return employee[0]?.organizationId ?? null;
 }
 
 export class OrganizationsController {
@@ -156,7 +157,7 @@ export class OrganizationsController {
    */
   static async getById(req: Request, res: Response) {
     try {
-      const id = req.params.id;
+      const id = req.params.id!;
       const userId = req.user?.userId;
 
       if (!userId) {
@@ -307,7 +308,7 @@ export class OrganizationsController {
    */
   static async update(req: Request, res: Response) {
     try {
-      const id = req.params.id;
+      const id = req.params.id!;
       const body = updateOrganizationSchema.parse(req.body);
       const userId = req.user?.userId;
 
@@ -338,7 +339,7 @@ export class OrganizationsController {
       }
 
       // Check for duplicate slug if being updated
-      if (body.slug && body.slug !== existing[0].slug) {
+      if (body.slug && body.slug !== existing[0]!.slug) {
         const existingSlug = await db
           .select({ id: organizations.id })
           .from(organizations)
@@ -351,7 +352,7 @@ export class OrganizationsController {
       }
 
       // Check for duplicate domain if being updated
-      if (body.domain && body.domain !== existing[0].domain) {
+      if (body.domain && body.domain !== existing[0]!.domain) {
         const existingDomain = await db
           .select({ id: organizations.id })
           .from(organizations)
@@ -414,7 +415,7 @@ export class OrganizationsController {
    */
   static async delete(req: Request, res: Response) {
     try {
-      const id = req.params.id;
+      const id = req.params.id!;
       const userId = req.user?.userId;
 
       if (!userId) {
@@ -467,7 +468,7 @@ export class OrganizationsController {
    */
   static async getStats(req: Request, res: Response) {
     try {
-      const id = req.params.id;
+      const id = req.params.id!;
       const userId = req.user?.userId;
 
       if (!userId) {

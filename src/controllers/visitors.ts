@@ -163,13 +163,13 @@ export class VisitorsController {
           lastName,
           email,
           phone,
-          watchlistReason: watchlistCheck[0].reason,
+          watchlistReason: watchlistCheck[0]!.reason,
         });
 
         return res.status(403).json({
           success: false,
           message: "This visitor is on the watchlist and cannot be created",
-          reason: watchlistCheck[0].reason,
+          reason: watchlistCheck[0]!.reason,
         });
       }
 
@@ -233,7 +233,7 @@ export class VisitorsController {
    */
   static async getById(req: Request, res: Response) {
     try {
-      const visitorId = req.params.id;
+      const visitorId = req.params.id!;
 
       const visitor = await fetchVisitorWithDetails(visitorId);
 
@@ -263,7 +263,7 @@ export class VisitorsController {
    */
   static async getVisitHistory(req: Request, res: Response) {
     try {
-      const visitorId = req.params.id;
+      const visitorId = req.params.id!;
 
       // Check if visitor exists
       const visitor = await db
@@ -315,7 +315,7 @@ export class VisitorsController {
    */
   static async update(req: Request, res: Response) {
     try {
-      const visitorId = req.params.id;
+      const visitorId = req.params.id!;
       const body = updateVisitorSchema.parse(req.body);
 
       // Check if visitor exists
@@ -353,7 +353,7 @@ export class VisitorsController {
           .where(eq(visitors.email, body.email))
           .limit(2);
 
-        if (duplicateExists.length > 1 || (duplicateExists.length === 1 && duplicateExists[0].id !== visitorId)) {
+        if (duplicateExists.length > 1 || (duplicateExists.length === 1 && duplicateExists[0]!.id !== visitorId)) {
           return res.status(409).json({
             success: false,
             message: "Email already in use by another visitor",
@@ -423,7 +423,7 @@ export class VisitorsController {
    */
   static async softDelete(req: Request, res: Response) {
     try {
-      const visitorId = req.params.id;
+      const visitorId = req.params.id!;
 
       // Check if visitor exists
       const existing = await db
@@ -481,7 +481,7 @@ export class VisitorsController {
    */
   static async blacklist(req: Request, res: Response) {
     try {
-      const visitorId = req.params.id;
+      const visitorId = req.params.id!;
       const { reason } = req.body;
 
       if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
@@ -549,7 +549,7 @@ export class VisitorsController {
    */
   static async removeFromBlacklist(req: Request, res: Response) {
     try {
-      const visitorId = req.params.id;
+      const visitorId = req.params.id!;
 
       // Check if visitor exists
       const existing = await db
@@ -565,7 +565,7 @@ export class VisitorsController {
         });
       }
 
-      if (!existing[0].isBlacklisted) {
+      if (!existing[0]!.isBlacklisted) {
         return res.status(400).json({
           success: false,
           message: "Visitor is not blacklisted",

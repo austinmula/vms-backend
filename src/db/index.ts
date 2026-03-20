@@ -1,25 +1,31 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "./schema";
 import { config } from "../config";
+import { log } from "../utils/logger";
 
-// Create the connection
-const sql = neon(config.database.url);
+const pool = new Pool({
+  connectionString: config.database.url,
+  ssl: config.database.url.includes("neon.tech")
+    ? { rejectUnauthorized: false }
+    : false,
+});
 
-// Create the database instance with schema
-export const db = drizzle(sql, { schema });
+export const db = drizzle(pool, { schema });
 
-// Connection test function
 export async function testConnection() {
+  const client = await pool.connect();
   try {
-    const result = await sql`SELECT 1 as test`;
-    console.log("✅ Database connection successful");
-    return result;
-  } catch (error) {
-    console.error("❌ Database connection failed:", error);
-    throw error;
+    await client.query("SELECT 1");
+    log.info("Database connection successful");
+  } finally {
+    client.release();
   }
 }
 
-export { sql };
+export async function closePool() {
+  await pool.end();
+}
+
+export { pool };
 export * from "./schema";

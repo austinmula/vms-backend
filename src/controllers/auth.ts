@@ -10,7 +10,7 @@ import {
   permissions,
 } from "../db/schema/tables";
 import { AuthUtils } from "../utils";
-import { auditLog } from "../utils/logger";
+import { log, auditLog } from "../utils/logger";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 
@@ -204,7 +204,7 @@ export class AuthController {
         },
       });
     } catch (error) {
-      console.error("Registration error:", error);
+      log.error("Registration failed", { error });
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -433,7 +433,7 @@ export class AuthController {
         },
       });
     } catch (error) {
-      console.error("Login error:", error);
+      log.error("Login failed", { error });
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -555,7 +555,7 @@ export class AuthController {
         },
       });
     } catch (error) {
-      console.error("Refresh token error:", error);
+      log.error("Token refresh failed", { error });
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -604,7 +604,7 @@ export class AuthController {
         message: "Logged out successfully",
       });
     } catch (error) {
-      console.error("Logout error:", error);
+      log.error("Logout failed", { error });
       res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -699,7 +699,7 @@ export class AuthController {
         },
       });
     } catch (error) {
-      console.error("Get profile error:", error);
+      log.error("Get profile failed", { error });
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -778,7 +778,7 @@ export class AuthController {
         message: "If the email exists, a password reset link has been sent",
       });
     } catch (error) {
-      console.error("Forgot password error:", error);
+      log.error("Forgot password failed", { error });
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -885,7 +885,7 @@ export class AuthController {
         message: "Password reset successfully",
       });
     } catch (error) {
-      console.error("Reset password error:", error);
+      log.error("Reset password failed", { error });
       return res.status(500).json({
         success: false,
         message: "Internal server error",

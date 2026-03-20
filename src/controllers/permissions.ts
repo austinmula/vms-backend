@@ -166,19 +166,12 @@ export class PermissionsController {
         .limit(1);
 
       if (firstOrg.length) {
-        await auditLog({
-          db,
-          organizationId: firstOrg[0].organizationId,
-          userId: req.user?.userId || null,
-          employeeId: req.user?.employeeId || null,
-          action: "create",
-          resource: "permissions",
-          resourceId: permission.id,
-          description: `Created permission: ${name}`,
-          newValues: { name, slug, resource, action, description },
-          ipAddress: req.ip,
-          userAgent: req.get("user-agent"),
-        });
+        await auditLog.securityEvent(
+          "permission_created",
+          { resourceId: permission.id, name, slug, resource, action, userId: req.user?.userId },
+          req.ip || "unknown",
+          firstOrg[0]!.organizationId
+        );
       }
 
       // Clear permission caches
@@ -269,7 +262,7 @@ export class PermissionsController {
         return res.status(404).json({ error: "Permission not found" });
       }
 
-      const permission = existing[0];
+      const permission = existing[0]!;
 
       // Prevent updating system permissions (slug, resource, action should not change)
       if (permission.isSystemPermission && req.user?.role !== "super_admin") {
@@ -295,20 +288,12 @@ export class PermissionsController {
           .limit(1);
 
         if (firstOrg.length) {
-          await auditLog({
-            db,
-            organizationId: firstOrg[0].organizationId,
-            userId: req.user?.userId || null,
-            employeeId: req.user?.employeeId || null,
-            action: "update",
-            resource: "permissions",
-            resourceId: id,
-            description: `Updated permission: ${permission.name}`,
-            oldValues: existing[0],
-            newValues: updateValues,
-            ipAddress: req.ip,
-            userAgent: req.get("user-agent"),
-          });
+          await auditLog.securityEvent(
+            "permission_updated",
+            { resourceId: id, name: permission.name, changes: updateValues, userId: req.user?.userId },
+            req.ip || "unknown",
+            firstOrg[0]!.organizationId
+          );
         }
 
         // Clear permission caches
@@ -348,7 +333,7 @@ export class PermissionsController {
         return res.status(404).json({ error: "Permission not found" });
       }
 
-      const permission = existing[0];
+      const permission = existing[0]!;
 
       // Prevent deleting system permissions
       if (permission.isSystemPermission) {
@@ -380,19 +365,12 @@ export class PermissionsController {
         .limit(1);
 
       if (firstOrg.length) {
-        await auditLog({
-          db,
-          organizationId: firstOrg[0].organizationId,
-          userId: req.user?.userId || null,
-          employeeId: req.user?.employeeId || null,
-          action: "delete",
-          resource: "permissions",
-          resourceId: id,
-          description: `Deleted permission: ${permission.name}`,
-          oldValues: permission,
-          ipAddress: req.ip,
-          userAgent: req.get("user-agent"),
-        });
+        await auditLog.securityEvent(
+          "permission_deleted",
+          { resourceId: id, name: permission.name, userId: req.user?.userId },
+          req.ip || "unknown",
+          firstOrg[0]!.organizationId
+        );
       }
 
       // Clear permission caches
