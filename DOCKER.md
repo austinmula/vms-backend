@@ -4,65 +4,82 @@
 
 - [Docker](https://docs.docker.com/get-docker/) 24+
 - [Docker Compose](https://docs.docker.com/compose/install/) v2+
+- Node.js 18+ (local, for generating migrations before building)
 
 ---
 
-## Quick Start (Local Development)
+## Quick Start
 
-### 1. Clone and configure environment
+### 1. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and set the following **required** values:
+Open `.env` and fill in the required values:
 
 ```env
-# Point to the Docker postgres service (not Neon) for local dev
 DATABASE_URL=postgresql://vms:vms_password@postgres:5432/vms_database
-
-# Change this to a strong secret
 JWT_SECRET=change-this-to-a-strong-random-secret
 
-# Postgres service credentials (must match DATABASE_URL above)
 POSTGRES_USER=vms
 POSTGRES_PASSWORD=vms_password
 POSTGRES_DB=vms_database
 ```
 
-### 2. Build and start all services
+> `DATABASE_URL` must use `postgres` as the hostname — that's the service name Docker Compose assigns to the database container.
+
+---
+
+### 2. Generate database migrations (run locally, before building)
+
+Migration SQL files must exist before building the image — they get bundled into `dist/db/migrations/` at build time.
+
+```bash
+npm install
+npm run db:generate
+```
+
+> Only needed once, or whenever you change the database schema (`src/db/schema/tables.ts`). Commit the generated files.
+
+---
+
+### 3. Build and start
 
 ```bash
 docker compose up --build
 ```
 
 This starts:
-- `postgres` — PostgreSQL 16 database on port `5432`
-- `app` — VMS backend API on port `3000`
+- `postgres` — PostgreSQL 16 on port `5432`
+- `app` — VMS API on port `3000`
 
-The app waits for Postgres to be healthy before starting.
+The app waits for Postgres to pass its health check before starting.
 
-### 3. Run database migrations
+---
 
-In a separate terminal, once the containers are running:
+### 4. Run migrations inside the container
 
 ```bash
 docker compose exec app node dist/db/migrate.js
 ```
 
-Or seed with test data:
+---
+
+### 5. (Optional) Seed with test data
 
 ```bash
 docker compose exec app node dist/db/seed.js
 ```
 
-### 4. Verify the API is running
+---
+
+### 6. Verify
 
 ```bash
 curl http://localhost:3000/health
 ```
 
-Expected response:
 ```json
 {
   "success": true,
@@ -76,71 +93,42 @@ Expected response:
 
 ## Common Commands
 
-### Start (detached / background)
+| Task | Command |
+|---|---|
+| Start (background) | `docker compose up -d` |
+| Stop | `docker compose down` |
+| Stop + wipe database | `docker compose down -v` |
+| Rebuild after code changes | `docker compose up --build` |
+| View all logs | `docker compose logs -f` |
+| View app logs only | `docker compose logs -f app` |
+| Shell into app container | `docker compose exec app sh` |
+| Connect to database | `docker compose exec postgres psql -U vms -d vms_database` |
+| Run migrations | `docker compose exec app node dist/db/migrate.js` |
+| Run seed | `docker compose exec app node dist/db/seed.js` |
+
+---
+
+## Local Development (without Docker)
 
 ```bash
-docker compose up -d
-```
-
-### View logs
-
-```bash
-# All services
-docker compose logs -f
-
-# App only
-docker compose logs -f app
-
-# Postgres only
-docker compose logs -f postgres
-```
-
-### Stop services
-
-```bash
-docker compose down
-```
-
-### Stop and remove all data (wipe database volume)
-
-```bash
-docker compose down -v
-```
-
-### Rebuild after code changes
-
-```bash
-docker compose up --build
-```
-
-### Open a shell in the app container
-
-```bash
-docker compose exec app sh
-```
-
-### Connect to the database directly
-
-```bash
-docker compose exec postgres psql -U vms -d vms_database
+npm install
+cp .env.example .env   # set DATABASE_URL to a local or Neon postgres
+npm run db:generate    # generate migrations (if schema changed)
+npm run db:migrate     # apply migrations
+npm run dev            # start with hot reload
 ```
 
 ---
 
 ## Using Neon Instead of Local Postgres
 
-If you prefer to keep using Neon as your database, remove the `postgres` service dependency and update your `.env`:
+Update `.env` to point to your Neon database and skip the `postgres` service:
 
 ```env
-DATABASE_URL=postgresql://username:password@ep-example.us-east-1.aws.neon.tech/vms_database?sslmode=require
-
-# Leave these blank — they're only used by the local postgres service
-POSTGRES_USER=
-POSTGRES_PASSWORD=
-POSTGRES_DB=
+DATABASE_URL=postgresql://user:pass@ep-example.us-east-1.aws.neon.tech/vms_database?sslmode=require
 ```
 
-Then run the app container only:
+Then start only the app container:
 
 ```bash
 docker compose up --build app
@@ -148,15 +136,15 @@ docker compose up --build app
 
 ---
 
-## Production Deployment
+## Production Build
 
-### Build the production image
+### Build image
 
 ```bash
 docker build --target production -t vms-backend:latest .
 ```
 
-### Run with environment variables
+### Run container
 
 ```bash
 docker run -d \
@@ -168,7 +156,18 @@ docker run -d \
   vms-backend:latest
 ```
 
-### Environment variables reference
+### Run migrations against production database
+
+```bash
+docker run --rm \
+  -e DATABASE_URL="postgresql://..." \
+  vms-backend:latest \
+  node dist/db/migrate.js
+```
+
+---
+
+## Environment Variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
@@ -179,42 +178,33 @@ docker run -d \
 | `PORT` | No | `3000` | Port the server listens on |
 | `NODE_ENV` | No | `development` | `production` enables JSON logs |
 | `CORS_ORIGIN` | No | `http://localhost:3000` | Comma-separated allowed origins |
-| `RATE_LIMIT_WINDOW_MS` | No | `900000` | Rate limit window (ms) |
+| `RATE_LIMIT_WINDOW_MS` | No | `900000` | Rate limit window in ms (default: 15 min) |
 | `RATE_LIMIT_MAX_ATTEMPTS` | No | `100` | Max requests per window per IP |
-| `LOG_LEVEL` | No | `info` | `error`, `warn`, `info`, `debug` |
-| `POSTGRES_USER` | No | `vms` | Local postgres user (docker-compose only) |
-| `POSTGRES_PASSWORD` | No | `vms_password` | Local postgres password (docker-compose only) |
-| `POSTGRES_DB` | No | `vms_database` | Local postgres database (docker-compose only) |
-
----
-
-## Health Check
-
-The app exposes a health endpoint used by Docker's health check:
-
-```
-GET /health
-```
-
-Docker will mark the container as `unhealthy` if this endpoint does not return HTTP 200 within 10 seconds. The `app` service will not start traffic until the `postgres` service passes its own health check.
+| `LOG_LEVEL` | No | `info` | `error` \| `warn` \| `info` \| `debug` |
+| `POSTGRES_USER` | No | `vms` | docker-compose postgres user |
+| `POSTGRES_PASSWORD` | No | `vms_password` | docker-compose postgres password |
+| `POSTGRES_DB` | No | `vms_database` | docker-compose postgres database |
 
 ---
 
 ## Troubleshooting
 
-**App fails to start with "Missing required environment variables"**
-- Ensure `.env` exists and contains `DATABASE_URL` and `JWT_SECRET`
+**"Missing required environment variables" on startup**
+→ `.env` file is missing or `DATABASE_URL` / `JWT_SECRET` are not set.
 
 **`ECONNREFUSED` connecting to postgres**
-- The app container may have started before postgres was ready. Run `docker compose up` again — the `depends_on` health check should prevent this, but a restart fixes it
+→ The app started before postgres was ready. Restart with `docker compose up`.
+
+**Migrations fail with "no such file or directory"**
+→ You haven't run `npm run db:generate` locally before building. Generate migrations, then rebuild: `docker compose up --build`.
 
 **Port 5432 already in use**
-- Another PostgreSQL instance is running locally. Stop it or change the host port in `docker-compose.yml`:
-  ```yaml
-  ports:
-    - "5433:5432"  # Use 5433 on the host instead
-  ```
+→ A local postgres is running. Change the host port in `docker-compose.yml`:
+```yaml
+ports:
+  - "5433:5432"
+```
+Then update `DATABASE_URL` to use port `5433`.
 
-**Migrations fail**
-- Confirm the app container is running and healthy before running migrations
-- Check `docker compose logs app` for connection errors
+**Schema changes not reflected after rebuild**
+→ Run `npm run db:generate` locally, commit the new migration file, then `docker compose up --build` and re-run `docker compose exec app node dist/db/migrate.js`.

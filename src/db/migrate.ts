@@ -1,3 +1,4 @@
+import path from "path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
@@ -14,7 +15,7 @@ async function runMigrations() {
 
   try {
     await migrate(db, {
-      migrationsFolder: "./src/db/migrations",
+      migrationsFolder: path.join(__dirname, "migrations"),
     });
 
     console.log("✅ Database migrations completed successfully");
