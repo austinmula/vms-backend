@@ -1,4 +1,21 @@
 services:
+  migrate:
+    build:
+      context: .
+      target: development
+    command: npm run db:migrate
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
   app:
     build:
       context: .
@@ -6,12 +23,17 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     env_file:
-      - .env
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     environment:
       NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
@@ -19,6 +41,29 @@ services:
       retries: 3
       start_period: 15s
     restart: unless-stopped
+
+  dev:
+    build:
+      context: .
+      target: development
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    profiles:
+      - dev
 
   postgres:
     image: postgres:16-alpine
