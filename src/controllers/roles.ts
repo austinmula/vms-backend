@@ -303,7 +303,7 @@ export class RolesController {
       const role = existing[0]!;
 
       // Prevent updating system roles
-      if (role.isSystemRole && req.user?.role !== "super_admin") {
+      if (role.isSystemRole && !req.user?.roles?.includes("super_admin")) {
         return res.status(403).json({
           error: "Cannot modify system roles",
         });
@@ -405,7 +405,7 @@ export class RolesController {
   static async assignPermissions(req: Request, res: Response) {
     try {
       const id = req.params.id!;
-      const { permissionIds } = assignPermissionsSchema.parse(req.body);
+      const { permissionIds, replace } = assignPermissionsSchema.parse(req.body);
 
       const roleExists = await db
         .select()
@@ -420,41 +420,63 @@ export class RolesController {
       const role = roleExists[0]!;
 
       // Prevent modifying system role permissions
-      if (role.isSystemRole && req.user?.role !== "super_admin") {
+      if (role.isSystemRole && !req.user?.roles?.includes("super_admin")) {
         return res.status(403).json({
           error: "Cannot modify system role permissions",
         });
       }
 
-      // Get existing permissions
-      const existingLinks = await db
-        .select({ permissionId: rolePermissions.permissionId })
-        .from(rolePermissions)
-        .where(eq(rolePermissions.roleId, id));
+      if (replace) {
+        // Replace mode: remove all existing, then insert the new set
+        await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id));
 
-      const existingSet = new Set(existingLinks.map((p) => p.permissionId));
+        if (permissionIds.length) {
+          const validPermissions = await db
+            .select({ id: permissions.id })
+            .from(permissions)
+            .where(inArray(permissions.id, permissionIds));
 
-      // Find new permissions to add
-      const newPermissionIds = permissionIds.filter((p) => !existingSet.has(p));
+          const validSet = new Set(validPermissions.map((p) => p.id));
+          const toInsert = permissionIds
+            .filter((pid) => validSet.has(pid))
+            .map((permissionId) => ({
+              roleId: id,
+              permissionId,
+              createdBy: req.user?.userId || null,
+            }));
 
-      if (newPermissionIds.length) {
-        // Validate permissions
-        const validPermissions = await db
-          .select({ id: permissions.id })
-          .from(permissions)
-          .where(inArray(permissions.id, newPermissionIds));
+          if (toInsert.length) {
+            await db.insert(rolePermissions).values(toInsert);
+          }
+        }
+      } else {
+        // Additive mode: only add permissions not already assigned
+        const existingLinks = await db
+          .select({ permissionId: rolePermissions.permissionId })
+          .from(rolePermissions)
+          .where(eq(rolePermissions.roleId, id));
 
-        const validSet = new Set(validPermissions.map((p) => p.id));
-        const toInsert = newPermissionIds
-          .filter((pid) => validSet.has(pid))
-          .map((permissionId) => ({
-            roleId: id,
-            permissionId,
-            createdBy: req.user?.userId || null,
-          }));
+        const existingSet = new Set(existingLinks.map((p) => p.permissionId));
+        const newPermissionIds = permissionIds.filter((p) => !existingSet.has(p));
 
-        if (toInsert.length) {
-          await db.insert(rolePermissions).values(toInsert);
+        if (newPermissionIds.length) {
+          const validPermissions = await db
+            .select({ id: permissions.id })
+            .from(permissions)
+            .where(inArray(permissions.id, newPermissionIds));
+
+          const validSet = new Set(validPermissions.map((p) => p.id));
+          const toInsert = newPermissionIds
+            .filter((pid) => validSet.has(pid))
+            .map((permissionId) => ({
+              roleId: id,
+              permissionId,
+              createdBy: req.user?.userId || null,
+            }));
+
+          if (toInsert.length) {
+            await db.insert(rolePermissions).values(toInsert);
+          }
         }
       }
 
@@ -500,7 +522,7 @@ export class RolesController {
       const role = roleExists[0]!;
 
       // Prevent modifying system role permissions
-      if (role.isSystemRole && req.user?.role !== "super_admin") {
+      if (role.isSystemRole && !req.user?.roles?.includes("super_admin")) {
         return res.status(403).json({
           error: "Cannot modify system role permissions",
         });

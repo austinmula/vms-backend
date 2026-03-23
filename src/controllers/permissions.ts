@@ -265,7 +265,7 @@ export class PermissionsController {
       const permission = existing[0]!;
 
       // Prevent updating system permissions (slug, resource, action should not change)
-      if (permission.isSystemPermission && req.user?.role !== "super_admin") {
+      if (permission.isSystemPermission && !req.user?.roles?.includes("super_admin")) {
         return res.status(403).json({
           error: "Cannot modify system permissions",
         });
