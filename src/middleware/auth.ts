@@ -81,7 +81,7 @@ export const requireRole = (roles: string[]) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(req.user.role ?? "")) {
       log.warn("Unauthorized access attempt", {
         userId: req.user.userId,
         role: req.user.role,
