@@ -354,9 +354,9 @@ export const listPermissionsQuerySchema = z.object({
 });
 
 export const assignPermissionsSchema = z.object({
-  permissionIds: z
-    .array(z.string().uuid())
-    .min(1, "At least one permission ID is required"),
+  permissionIds: z.array(z.string().uuid()),
+  /** When true, replaces the entire permission set. When false (default), adds to existing. */
+  replace: z.boolean().optional().default(false),
 });
 
 // Types
