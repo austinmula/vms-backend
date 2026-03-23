@@ -139,9 +139,14 @@ export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
 // Authentication types
 export interface JwtPayload {
   userId: string;
-  companyId: string;
   email: string;
-  role: string;
+  employeeId: string;
+  organizationId: string;
+  roles: string[];
+  /** @deprecated use roles[] */
+  companyId?: string;
+  /** @deprecated use roles[] */
+  role?: string;
   iat?: number;
   exp?: number;
 }
