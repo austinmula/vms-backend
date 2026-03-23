@@ -54,6 +54,25 @@ export const resetPasswordSchema = z.object({
     ),
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      "Password must contain uppercase, lowercase, number and special character"
+    ),
+});
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  phone: z.string().optional(),
+  department: z.string().optional(),
+  jobTitle: z.string().optional(),
+});
+
 export class AuthController {
   /**
    * Register a new system user
@@ -886,6 +905,148 @@ export class AuthController {
       });
     } catch (error) {
       log.error("Reset password failed", { error });
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Change password for the authenticated user
+   */
+  static async changePassword(
+    req: Request,
+    res: Response
+  ): Promise<Response | void> {
+    try {
+      const validation = changePasswordSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed",
+          errors: validation.error.errors,
+        });
+      }
+
+      const { currentPassword, newPassword } = validation.data;
+      const userId = req.user!.userId;
+      const clientIp = req.ip || req.connection.remoteAddress || "unknown";
+
+      const userRecord = await db
+        .select()
+        .from(systemUsers)
+        .where(eq(systemUsers.id, userId))
+        .limit(1);
+
+      if (userRecord.length === 0) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      const user = userRecord[0]!;
+
+      const isValid = await AuthUtils.comparePassword(currentPassword, user.passwordHash);
+      if (!isValid) {
+        auditLog.securityEvent("change_password_invalid_current", { userId }, clientIp);
+        return res.status(401).json({
+          success: false,
+          message: "Current password is incorrect",
+        });
+      }
+
+      const passwordHash = await AuthUtils.hashPassword(newPassword);
+      await db
+        .update(systemUsers)
+        .set({
+          passwordHash,
+          lastPasswordChangeAt: new Date(),
+          mustChangePassword: false,
+        })
+        .where(eq(systemUsers.id, userId));
+
+      // Invalidate all refresh tokens to force re-login on other devices
+      await db
+        .update(authenticationTokens)
+        .set({ isActive: false, revokedAt: new Date() })
+        .where(
+          and(
+            eq(authenticationTokens.userId, userId),
+            eq(authenticationTokens.tokenType, "refresh"),
+            eq(authenticationTokens.isActive, true)
+          )
+        );
+
+      auditLog.securityEvent("change_password_success", { userId }, clientIp);
+
+      return res.json({
+        success: true,
+        message: "Password changed successfully",
+      });
+    } catch (error) {
+      log.error("Change password failed", { error });
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Update the authenticated user's profile (employee fields)
+   */
+  static async updateProfile(
+    req: Request,
+    res: Response
+  ): Promise<Response | void> {
+    try {
+      const validation = updateProfileSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed",
+          errors: validation.error.errors,
+        });
+      }
+
+      const userId = req.user!.userId;
+      const updates = validation.data;
+
+      const userRecord = await db
+        .select({ employeeId: systemUsers.employeeId })
+        .from(systemUsers)
+        .where(eq(systemUsers.id, userId))
+        .limit(1);
+
+      if (userRecord.length === 0) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      const employeeId = userRecord[0]!.employeeId;
+      if (!employeeId) {
+        return res.status(400).json({
+          success: false,
+          message: "User has no associated employee record",
+        });
+      }
+
+      const updateValues: Record<string, string | undefined> = {};
+      if (updates.firstName !== undefined) updateValues.firstName = updates.firstName;
+      if (updates.lastName !== undefined) updateValues.lastName = updates.lastName;
+      if (updates.phone !== undefined) updateValues.phone = updates.phone;
+      if (updates.department !== undefined) updateValues.department = updates.department;
+      if (updates.jobTitle !== undefined) updateValues.jobTitle = updates.jobTitle;
+
+      if (Object.keys(updateValues).length > 0) {
+        await db
+          .update(employees)
+          .set(updateValues)
+          .where(eq(employees.id, employeeId));
+      }
+
+      // Return updated profile via /me logic
+      return AuthController.me(req, res);
+    } catch (error) {
+      log.error("Update profile failed", { error });
       return res.status(500).json({
         success: false,
         message: "Internal server error",

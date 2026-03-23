@@ -8,6 +8,8 @@ import {
   refreshTokenSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changePasswordSchema,
+  updateProfileSchema,
 } from "../controllers/auth";
 
 const router = Router();
@@ -75,6 +77,30 @@ router.post(
   "/reset-password",
   validateRequest(resetPasswordSchema),
   AuthController.resetPassword
+);
+
+/**
+ * @route POST /api/auth/change-password
+ * @desc Change password for the authenticated user (requires current password)
+ * @access Private
+ */
+router.post(
+  "/change-password",
+  authenticateToken,
+  validateRequest(changePasswordSchema),
+  AuthController.changePassword
+);
+
+/**
+ * @route PATCH /api/auth/me
+ * @desc Update the authenticated user's profile
+ * @access Private
+ */
+router.patch(
+  "/me",
+  authenticateToken,
+  validateRequest(updateProfileSchema),
+  AuthController.updateProfile
 );
 
 export default router;
