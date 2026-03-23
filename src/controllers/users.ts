@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { and, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, eq, ilike, inArray, or, count } from "drizzle-orm";
 import { db } from "../db";
 import { systemUsers, roles, userRoles, employees } from "../db/schema/tables";
 import { AuthUtils } from "../utils";
@@ -20,6 +20,8 @@ async function fetchUserWithRoles(userId: string) {
     .limit(1);
 
   if (user.length === 0) return null;
+
+  const { passwordHash: _ph, saltHash: _sh, ...safeUser } = user[0]!;
 
   const roleLinks = await db
     .select({
@@ -45,7 +47,7 @@ async function fetchUserWithRoles(userId: string) {
   }
 
   return {
-    ...user[0],
+    ...safeUser,
     roles: roleRecords,
   };
 }
@@ -61,6 +63,14 @@ export class UsersController {
       if (typeof isActive === "boolean") {
         conditions.push(eq(systemUsers.isActive, isActive));
       }
+      if (search) {
+        conditions.push(
+          or(
+            ilike(systemUsers.email, `%${search}%`),
+            ilike(systemUsers.employeeId, `%${search}%`)
+          )
+        );
+      }
 
       // Build query with conditions applied before limit/offset
       let baseQuery = db.select().from(systemUsers);
@@ -69,16 +79,7 @@ export class UsersController {
         baseQuery = baseQuery.where(and(...conditions)) as any;
       }
 
-      let users = await baseQuery.limit(limit).offset(offset);
-
-      // Search filter (simple email / employee match)
-      if (search) {
-        users = users.filter(
-          (u) =>
-            u.email.toLowerCase().includes(search.toLowerCase()) ||
-            (u.employeeId || "").toLowerCase().includes(search.toLowerCase())
-        );
-      }
+      const users = await baseQuery.limit(limit).offset(offset);
 
       // Attach roles
       const userIds = users.map((u) => u.id);
@@ -116,10 +117,10 @@ export class UsersController {
         }
       }
 
-      let enriched = users.map((u) => ({
-        ...u,
-        roles: roleMap[u.id] || [],
-      }));
+      let enriched = users.map((u) => {
+        const { passwordHash: _ph, saltHash: _sh, ...safeU } = u;
+        return { ...safeU, roles: roleMap[u.id] || [] };
+      });
 
       if (role) {
         enriched = enriched.filter((u) => u.roles.some((r) => r.name === role));
