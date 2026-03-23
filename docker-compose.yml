@@ -24,7 +24,7 @@ services:
       context: .
       target: production
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-4001}:4001"
     env_file:
       - path: .env
         required: false
@@ -39,7 +39,7 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:4001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -51,7 +51,7 @@ services:
       context: .
       target: development
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-4001}:4001"
     env_file:
       - path: .env
         required: false

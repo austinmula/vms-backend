@@ -6,7 +6,7 @@ dotenv.config();
 export const config = {
   // Server configuration
   server: {
-    port: parseInt(process.env.PORT || "3000", 10),
+    port: parseInt(process.env.PORT || "4001", 10),
     nodeEnv: process.env.NODE_ENV || "development",
   },
 
@@ -30,7 +30,7 @@ export const config = {
 
   // CORS configuration
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000"],
+    origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:4001"],
   },
 
   // Logging configuration
